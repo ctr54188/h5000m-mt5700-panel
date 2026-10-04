@@ -1,0 +1,41 @@
+#!/bin/sh
+# 极简 uci 兼容层：实现 at-webserver 需要的 show / set / commit
+D=${UCI_CONFIG_DIR:-/etc/config}
+cmd=$1; shift
+strip() { printf '%s' "$1" | sed -e 's/[[:space:]]#.*$//' -e "s/^'//" -e "s/'$//" | sed -e 's/[[:space:]]*$//'; }
+case "$cmd" in
+show)
+    pkg=$1; f="$D/$pkg"; [ -f "$f" ] || exit 0
+    sect=""
+    while IFS= read -r line; do
+        set -- $line
+        case "$1" in
+            config)
+                if [ -n "$3" ]; then sect=$(strip "$3"); else sect=$(strip "$2"); fi
+                ;;
+            option)
+                name=$2; shift 2
+                printf "%s.%s.%s='%s'\n" "$pkg" "$sect" "$name" "$(strip "$*")"
+                ;;
+        esac
+    done < "$f"
+    ;;
+set)
+    arg=$1
+    key=${arg%%=*}; val=${arg#*=}
+    key=${key#*.}
+    opt=${key#*.}
+    f="$D/at-webserver"
+    [ -f "$f" ] || : > "$f"
+    if grep -qE "^[[:space:]]*option[[:space:]]+$opt[[:space:]]" "$f"; then
+        awk -v o="$opt" -v v="$val" '
+            $1=="option" && $2==o { print "\toption " o " '\''" v "'\''"; next }
+            { print }
+        ' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    else
+        printf "\toption %s '%s'\n" "$opt" "$val" >> "$f"
+    fi
+    ;;
+commit) exit 0 ;;
+*) echo "uci shim: unsupported: $cmd $*" >&2; exit 1 ;;
+esac

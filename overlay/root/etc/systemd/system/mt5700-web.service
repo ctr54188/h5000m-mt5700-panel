@@ -1,0 +1,13 @@
+[Unit]
+Description=MT5700M 5G 模组管理面板 (luci-app-mt5700 移植版)
+After=at-webserver.service
+Wants=at-webserver.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/mt5700-web --bind 0.0.0.0 --port 8181 --rpc 127.0.0.1:8765 --root /usr/share/mt5700-panel/www
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

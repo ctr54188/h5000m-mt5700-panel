@@ -1,0 +1,20 @@
+--- a/src/rust/src/serialdetect.rs	2026-10-04 22:33:44
++++ b/src/rust/src/serialdetect.rs	2026-10-04 22:33:44
+@@ -170,9 +170,16 @@
+                 // 按整行判定，不做子串匹配。此前用 seen.contains("OK")，
+                 // 命令回显与 URC 拼接（如 ^SIMSQ: 0,123OK）都会把不可用的端口
+                 // 误判成 AT 口，于是自动探测可能选中 GPS/应用口。
+-                while let Some(i) = residual.iter().position(|&b| b == b'\n') {
++                // 同时按 \r 与 \n 分行：AT 应答以 \r\n 结尾，而模组上一次会话
++                // 异常关闭时会在缓冲里留下不带换行的 NUL 垃圾（^@^@^@）。
++                // 只认 \n 会把 "\0\0OK" 拼成一行，整行匹配失败 → 明明可用的
++                // 端口被判定为「无有效应答」，自动探测整体失败。
++                while let Some(i) = residual.iter().position(|&b| b == b'\n' || b == b'\r') {
+                     let line = String::from_utf8_lossy(&residual[..i]).trim().to_string();
+                     residual.drain(..=i);
++                    if line.is_empty() {
++                        continue;
++                    }
+                     if is_final_line(&line) {
+                         return true;
+                     }

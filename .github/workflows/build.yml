@@ -1,0 +1,108 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  TARGET: aarch64-unknown-linux-gnu
+
+jobs:
+  # 主构建：在 x86_64 runner 上交叉编译到 aarch64（与设备 Debian 13 glibc 兼容）
+  build-aarch64:
+    name: build (aarch64, cross)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: 安装交叉工具链
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu file
+
+      - name: 缓存 cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src/mt5700-web/target
+            vendor/luci-app-mt5700/src/rust/target
+          key: ${{ runner.os }}-aarch64-${{ hashFiles('src/mt5700-web/Cargo.toml', 'patches/*.patch') }}
+
+      - name: 拉取上游（pin 提交）
+        run: make deps
+
+      - name: 编译（两个二进制）
+        run: make build
+
+      - name: 组装分发包
+        run: make dist
+
+      - name: 校验产物架构
+        run: |
+          file build/out/$TARGET/* || true
+          file dist/usr/bin/* || true
+          dist/usr/bin/mt5700-web --version || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: h5000m-mt5700-panel-aarch64
+          path: |
+            build/*.tar.gz
+            build/*.tar.gz.sha256
+          if-no-files-found: error
+
+  # 交叉编译健康检查：务必能编译出来（arm 原生 runner 可选，失败不阻塞）
+  build-native-arm:
+    name: build (aarch64, native runner)
+    runs-on: ubuntu-24.04-arm
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: make deps
+      - run: TARGET= make build
+      - run: TARGET= make dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: h5000m-mt5700-panel-native-arm64
+          path: build/*.tar.gz
+
+  release:
+    name: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ build-aarch64 ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: h5000m-mt5700-panel-aarch64
+          path: build
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/*.tar.gz
+            build/*.tar.gz.sha256
+          generate_release_notes: true
+          body: |
+            MT5700M 面板（Debian/Linux 移植）—— 覆盖安装包。
+
+            ```sh
+            sha256sum -c *.tar.gz.sha256
+            tar xzf h5000m-mt5700-panel-*.tar.gz -C /
+            systemctl daemon-reload
+            systemctl enable --now at-webserver mt5700-web
+            ```
+            访问 `http://<设备IP>:8181/`。

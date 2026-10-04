@@ -1,0 +1,303 @@
+/* 面板外壳样式（H5000M / MT5700M）
+ *
+ * 为什么需要它：
+ *   本项目前端自带完整设计系统（at-webserver/mt5700.css 的 --mt5700-* token、
+ *   .mt5700-card/.mt5700-btn/.mt5700-input 等）。而 LuCI 主题的 cascade.css 会
+ *   用 `background` 简写 + !important 覆盖 select/input/button，导致：
+ *     - 下拉框文字被裁掉一半（项目 CSS 里对此有专门注释）
+ *     - 按钮/输入框风格与页面卡片不一致
+ *   因此本移植版不加载主题 CSS，外壳（顶栏/导航/底栏）同样沿用项目的 token，
+ *   保证整页观感统一。视图内部的样式仍来自项目原始 CSS，一行未改。
+ */
+
+:root { color-scheme: light; }
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body.mt-shell {
+	margin: 0;
+	padding: 0;
+	min-height: 100vh;
+	font-family: var(--mt5700-font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--mt5700-text, #17324b);
+	background:
+		radial-gradient(1200px 600px at 12% -10%, rgba(41, 169, 225, 0.10), transparent 60%),
+		radial-gradient(1000px 520px at 88% 0%, rgba(23, 166, 127, 0.08), transparent 55%),
+		linear-gradient(180deg, #f1f6fc 0%, #e9f0f8 100%);
+	background-attachment: fixed;
+}
+
+/* ---------------- 顶栏 ---------------- */
+.mt-shell-header {
+	position: sticky;
+	top: 0;
+	z-index: 60;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px 20px;
+	padding: 11px 22px;
+	background: var(--mt5700-float-bg, rgba(255, 255, 255, 0.88));
+	-webkit-backdrop-filter: var(--mt5700-glass, blur(24px) saturate(180%));
+	backdrop-filter: var(--mt5700-glass, blur(24px) saturate(180%));
+	border-bottom: 1px solid var(--mt5700-border-subtle, rgba(218, 230, 242, 0.85));
+	box-shadow: var(--mt5700-sh-1, 0 1px 3px rgba(18, 48, 86, 0.04));
+}
+
+.mt-shell-brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	text-decoration: none;
+	color: var(--mt5700-text, #17324b);
+}
+
+.mt-shell-brand-logo {
+	width: 34px;
+	height: 34px;
+	border-radius: 10px;
+	display: grid;
+	place-items: center;
+	background: linear-gradient(135deg, #29a9e1, #17a67f);
+	color: #fff;
+	font-size: 15px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	box-shadow: 0 4px 12px rgba(8, 124, 186, 0.28);
+}
+
+.mt-shell-brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.mt-shell-brand-name { font-size: 16px; font-weight: 700; }
+.mt-shell-brand-sub { font-size: 11px; font-weight: 500; color: var(--mt5700-text-muted, #8ba3b6); }
+
+.mt-shell-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.mt-shell-nav a {
+	display: inline-block;
+	padding: 7px 13px;
+	border-radius: 999px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--mt5700-text-secondary, #5a738e);
+	text-decoration: none;
+	white-space: nowrap;
+	border: 1px solid transparent;
+	transition: background var(--mt5700-transition-fast, 0.15s ease),
+	            color var(--mt5700-transition-fast, 0.15s ease),
+	            box-shadow var(--mt5700-transition-fast, 0.15s ease);
+}
+
+.mt-shell-nav a:hover {
+	background: rgba(41, 169, 225, 0.10);
+	color: var(--mt5700-accent, #087cba);
+}
+
+.mt-shell-nav a.active {
+	background: var(--mt5700-accent, #087cba);
+	color: #fff;
+	box-shadow: 0 2px 8px rgba(8, 124, 186, 0.30);
+}
+
+.mt-shell-indicators {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--mt5700-text-muted, #8ba3b6);
+}
+
+.mt-shell-indicators .spinning,
+.mt-shell-indicators .label {
+	padding: 3px 10px;
+	border-radius: 999px;
+	background: rgba(41, 169, 225, 0.10);
+	color: var(--mt5700-accent, #087cba);
+}
+
+/* ---------------- 内容区 ---------------- */
+.mt-shell-main {
+	max-width: 1520px;
+	margin: 0 auto;
+	padding: 18px 22px 34px;
+}
+
+#view { min-height: 200px; }
+
+.mt-shell-loading,
+.spinning {
+	padding: 26px 0;
+	text-align: center;
+	color: var(--mt5700-text-muted, #8ba3b6);
+	font-size: 13px;
+}
+
+/* ---------------- 底栏 ---------------- */
+.mt-shell-footer {
+	padding: 4px 22px 28px;
+	text-align: center;
+	font-size: 12px;
+	color: var(--mt5700-text-muted, #8ba3b6);
+}
+
+.mt-shell-footer .sep { margin: 0 8px; opacity: 0.5; }
+
+/* 项目页面自带操作按钮，隐藏 LuCI 通用“保存/应用”底栏与面包屑 */
+.cbi-page-actions,
+#view .cbi-page-actions { display: none !important; }
+#modemenu { display: none !important; }
+
+/* ---------------- 基础控件兜底（不再依赖主题） ----------------
+ * 之前的故障：主题 cascade.css 用简写 background + !important 覆盖控件，
+ * 并把 select 的行高/内边距压扁，导致文字只显示一半。这里给出确定可用的度量，
+ * 项目自身的 .mt5700-input / .mt5700-select / .mt5700-btn 仍优先生效。 */
+select,
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+textarea {
+	font-family: inherit;
+	font-size: 14px;
+	line-height: 1.5;
+	min-height: 40px;
+	height: auto;
+	padding: 8px 12px;
+	box-sizing: border-box;
+	color: var(--mt5700-text, #17324b);
+	background-color: #fff;
+	border: 1px solid var(--mt5700-border-subtle, #dae6f2);
+	border-radius: var(--mt5700-radius-md, 10px);
+	vertical-align: middle;
+}
+
+select { padding-right: 38px; }
+
+textarea { min-height: 84px; line-height: 1.55; }
+
+input[type="checkbox"],
+input[type="radio"] { min-height: 0; padding: 0; }
+
+button,
+input[type="button"],
+input[type="submit"] {
+	font-family: inherit;
+	font-size: 13px;
+}
+
+/* LuCI 通用按钮（少数遗留位置）沿用项目观感 */
+button.btn,
+button.cbi-button,
+.btn.cbi-button,
+.cbi-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 9px 18px;
+	font-weight: 500;
+	color: var(--mt5700-text, #17324b);
+	background: var(--mt5700-card-bg, #fff);
+	border: 1px solid var(--mt5700-border-subtle, #dae6f2);
+	border-radius: var(--mt5700-radius-md, 10px);
+	cursor: pointer;
+	box-shadow: none;
+	text-shadow: none;
+	transition: background var(--mt5700-transition-fast, 0.15s ease),
+	            transform var(--mt5700-transition-fast, 0.15s ease);
+}
+
+button.btn:hover,
+.cbi-button:hover { background: var(--mt5700-card-bg-hover, #fff); transform: translateY(-1px); }
+
+.cbi-button-apply,
+.cbi-button-save,
+.cbi-button-positive,
+.important {
+	background: var(--mt5700-accent, #087cba) !important;
+	border-color: var(--mt5700-accent, #087cba) !important;
+	color: #fff !important;
+}
+
+.cbi-button-reset,
+.cbi-button-negative { background: var(--mt5700-card-bg, #fff) !important; color: var(--mt5700-text, #17324b) !important; }
+
+/* ---------------- LuCI 通知/弹窗（最小可用） ---------------- */
+#notification_area {
+	position: fixed;
+	right: 18px;
+	top: 72px;
+	z-index: 1200;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-width: 380px;
+}
+
+.alert-message {
+	background: var(--mt5700-float-bg, #fff);
+	border: 1px solid var(--mt5700-border-subtle, #dae6f2);
+	border-left: 4px solid var(--mt5700-accent, #087cba);
+	border-radius: 12px;
+	padding: 12px 16px;
+	box-shadow: var(--mt5700-sh-2, 0 4px 12px rgba(18, 48, 86, 0.06));
+	font-size: 13px;
+}
+
+.alert-message h4 { margin: 0 0 4px; font-size: 14px; }
+.alert-message.warning { border-left-color: var(--mt5700-warning, #f0a020); }
+.alert-message.error { border-left-color: var(--mt5700-danger, #e05252); }
+.alert-message.success { border-left-color: var(--mt5700-success, #17a67f); }
+
+/* LuCI 的弹窗容器：主题里靠 body.modal-overlay-active 切换显隐，
+ * 不加载主题时会以空壳形式常驻在页面底部（一条白条），这里补齐规则。 */
+#modal_overlay { display: none; }
+
+body.modal-overlay-active #modal_overlay {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1300;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	background: rgba(15, 35, 55, 0.34);
+	-webkit-backdrop-filter: blur(2px);
+	backdrop-filter: blur(2px);
+}
+
+.modal {
+	width: min(900px, 94vw);
+	max-height: 86vh;
+	overflow: auto;
+	padding: 18px 20px;
+	background: var(--mt5700-float-bg, #fff);
+	border: 1px solid var(--mt5700-border-subtle, #dae6f2);
+	border-radius: 16px;
+	box-shadow: var(--mt5700-sh-float, 0 12px 36px rgba(18, 48, 86, 0.09));
+}
+
+.modal > h4:first-child { margin-top: 0; }
+
+/* 响应式：窄屏收紧留白 */
+@media (max-width: 900px) {
+	.mt-shell-header { padding: 10px 14px; gap: 8px 12px; }
+	.mt-shell-main { padding: 14px 14px 28px; }
+	.mt-shell-nav a { padding: 6px 11px; font-size: 12.5px; }
+	.mt-shell-brand-sub { display: none; }
+}

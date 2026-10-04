@@ -1,0 +1,7 @@
+# 构建产物
+/build/
+/dist/
+/vendor/luci-app-mt5700/src/rust/target/
+/src/mt5700-web/target/
+*.tar.gz
+*.tar.gz.sha256

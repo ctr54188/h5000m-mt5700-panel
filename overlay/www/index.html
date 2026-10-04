@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="initial-scale=1.0">
+<title>MT5700M 5G 模组管理 - H5000M</title>
+<!-- 项目自带的样式表：外壳与页面共用同一套设计 token（不加载 LuCI 主题 CSS，
+     否则主题的 !important 规则会破坏下拉框/按钮观感） -->
+<link rel="stylesheet" href="/luci-static/resources/at-webserver/mt5700.css?v=2.13.0">
+<link rel="stylesheet" href="/luci-static/resources/at-webserver/at.css?v=1.6.0">
+<link rel="stylesheet" href="/panel-shell.css?v=1">
+<link rel="icon" href="/luci-static/bootstrap/logo.svg" sizes="any">
+<script src="/luci-static/resources/cbi.js"></script>
+</head>
+<body class="mt-shell">
+<header class="mt-shell-header">
+  <a class="mt-shell-brand" href="/">
+    <span class="mt-shell-brand-logo">5G</span>
+    <span class="mt-shell-brand-text">
+      <span class="mt-shell-brand-name">H5000M 模组管理</span>
+      <span class="mt-shell-brand-sub">MT5700M-CN · Debian</span>
+    </span>
+  </a>
+  <nav class="mt-shell-nav" id="mt-nav"></nav>
+  <div class="mt-shell-indicators" id="indicators"></div>
+</header>
+
+<main class="mt-shell-main">
+  <div id="view"><div class="mt-shell-loading">正在加载视图…</div></div>
+</main>
+
+<footer class="mt-shell-footer">
+  <span>MT5700M 5G 模组管理</span><span class="sep">·</span>
+  <span>Hiveton H5000M</span><span class="sep">·</span>
+  <span>Debian GNU/Linux</span><span class="sep">·</span>
+  <span>luci-app-mt5700 移植版</span>
+</footer>
+
+<script src="/luci-static/resources/luci.js"></script>
+<script>
+/* 面板外壳：等价 luci-base 的 header.ut/footer.ut + view.ut 三件套。
+   视图脚本与样式全部是项目原始文件（/luci-static/resources/view/at-webserver/*.js），
+   一行未改；此处只负责注入 L.env、生成导航并按 dispatchpath 挂载视图。 */
+(function () {
+	var PAGES = [
+		{ file: 'network_status',   title: '网络状态' },
+		{ file: 'network_settings', title: '网络设置' },
+		{ file: 'dial',             title: '拨号设置' },
+		{ file: 'scan',             title: '全网扫频' },
+		{ file: 'schedule',         title: '定时锁频' },
+		{ file: 'modem_settings',   title: '模组设置' },
+		{ file: 'upgrade',          title: '模组升级' },
+		{ file: 'sms_center',       title: '短信中心' },
+		{ file: 'sms_settings',     title: '短信设置' },
+		{ file: 'terminal',         title: 'AT 调试终端' },
+		{ file: 'logs',             title: '运行日志' },
+		{ file: 'service',          title: '服务配置' }
+	];
+
+	var q = new URLSearchParams(window.location.search);
+	var key = q.get('view') || 'network_status';
+	var page = null;
+	for (var i = 0; i < PAGES.length; i++)
+		if (PAGES[i].file === key) page = PAGES[i];
+	if (!page) page = PAGES[0];
+
+	var nav = document.getElementById('mt-nav');
+	PAGES.forEach(function (p) {
+		var a = document.createElement('a');
+		a.href = '/?view=' + p.file;
+		a.textContent = p.title;
+		if (p.file === page.file) a.className = 'active';
+		nav.appendChild(a);
+	});
+
+	L = new LuCI({
+		media: '/luci-static/bootstrap',
+		resource: '/luci-static/resources',
+		scriptname: '/',
+		pathinfo: '',
+		documentroot: '/usr/share/mt5700-panel/www',
+		requestpath: '/',
+		dispatchpath: [ 'admin', 'modem', '5g', page.file ],
+		pollinterval: 5,
+		ubuspath: '/ubus/',
+		sessionid: 'debian',
+		token: '',
+		nodespec: { satisfied: true, readonly: false },
+		apply_rollback: 90,
+		apply_holdoff: 4,
+		apply_timeout: 5,
+		apply_display: 1.5,
+		rollback_token: ''
+	});
+
+	/* 与 luci-base/ucode/template/view.ut 相同：ui.instantiateView(视图路径) */
+	L.require('ui').then(function (ui) {
+		return ui.instantiateView('at-webserver/' + page.file);
+	}).then(function (view) {
+		if (typeof view === 'function')
+			new view();
+	}).catch(function (e) {
+		console.error('视图加载失败:', e);
+		var v = document.getElementById('view');
+		if (v) v.innerHTML = '<div class="mt-shell-loading">视图加载失败：' +
+			String(e && e.message || e) + '</div>';
+	});
+})();
+</script>
+</body>
+</html>
