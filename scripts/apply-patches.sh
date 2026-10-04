@@ -3,7 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/vendor/luci-app-mt5700"
-[ -d "$APP" ] || { echo "缺少 $APP，先跑 scripts/fetch-upstreams.sh" >&2; exit 1; }
+[ -d "$APP" ] || { echo "缺少 ${APP}，先跑 scripts/fetch-upstreams.sh" >&2; exit 1; }
 
 shopt -s nullglob
 for p in "$ROOT"/patches/*.patch; do

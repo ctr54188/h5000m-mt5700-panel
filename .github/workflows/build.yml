@@ -12,22 +12,14 @@ env:
   TARGET: aarch64-unknown-linux-gnu
 
 jobs:
-  # 主构建：在 x86_64 runner 上交叉编译到 aarch64（与设备 Debian 13 glibc 兼容）
+  # 主构建：原生 aarch64 runner（ubuntu-24.04-arm），无需交叉工具链
   build-aarch64:
-    name: build (aarch64, cross)
-    runs-on: ubuntu-latest
+    name: build (aarch64, native runner)
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-unknown-linux-gnu
-
-      - name: 安装交叉工具链
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu file
 
       - name: 缓存 cargo
         uses: actions/cache@v4
@@ -37,22 +29,23 @@ jobs:
             ~/.cargo/git
             src/mt5700-web/target
             vendor/luci-app-mt5700/src/rust/target
-          key: ${{ runner.os }}-aarch64-${{ hashFiles('src/mt5700-web/Cargo.toml', 'patches/*.patch') }}
+          key: ${{ runner.os }}-arm64-${{ hashFiles('src/mt5700-web/Cargo.toml', 'patches/*.patch') }}
 
       - name: 拉取上游（pin 提交）
         run: make deps
 
-      - name: 编译（两个二进制）
-        run: make build
+      - name: 编译（两个二进制，本机架构）
+        run: TARGET= make build
 
       - name: 组装分发包
-        run: make dist
+        run: TARGET= make dist
 
-      - name: 校验产物架构
+      - name: 校验产物
         run: |
-          file build/out/$TARGET/* || true
-          file dist/usr/bin/* || true
-          dist/usr/bin/mt5700-web --version || true
+          file build/out/host/*
+          build/out/host/mt5700-web --version
+          ./build/out/host/at-webserver-rust --version || true
+          tar tzf build/*.tar.gz | head -20
 
       - uses: actions/upload-artifact@v4
         with:
@@ -62,21 +55,27 @@ jobs:
             build/*.tar.gz.sha256
           if-no-files-found: error
 
-  # 交叉编译健康检查：务必能编译出来（arm 原生 runner 可选，失败不阻塞）
-  build-native-arm:
-    name: build (aarch64, native runner)
-    runs-on: ubuntu-24.04-arm
+  # 交叉编译校验（x86_64 → aarch64）：验证交叉链路可用，失败不阻塞
+  build-cross:
+    name: build (aarch64, cross-check)
+    runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: make deps
-      - run: TARGET= make build
-      - run: TARGET= make dist
-      - uses: actions/upload-artifact@v4
         with:
-          name: h5000m-mt5700-panel-native-arm64
-          path: build/*.tar.gz
+          targets: aarch64-unknown-linux-gnu
+      - name: 安装交叉工具链
+        run: |
+          sudo apt-get update
+          # crt*.o 来自 libc6-dev-*-cross，缺它会报 "cannot find Scrt1.o / crti.o"
+          sudo apt-get install -y --no-install-recommends \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            libc6-dev-arm64-cross file
+      - run: make deps
+      - run: make build
+      - run: make dist
+      - run: file build/out/$TARGET/*
 
   release:
     name: release
