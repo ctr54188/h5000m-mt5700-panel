@@ -34,6 +34,13 @@ clone_pin() {
 	if [ -d "$dest/.git" ]; then
 		echo "== 复用已有 $dest"
 	else
+		if [ -e "$dest" ]; then
+			# CI 缓存可能只恢复了 vendored 目录的一部分（如 .../src/rust/target），
+			# 留下一个「不是 git 仓库」的空壳，直接 clone 会 fatal: destination path
+			# already exists and is not an empty directory。这里清掉重来。
+			echo "== 清理非 git 残留目录 $dest"
+			rm -rf "$dest"
+		fi
 		echo "== 克隆 $repo -> $dest"
 		retry 3 git clone --filter=blob:none --no-checkout "$repo" "$dest" \
 			|| retry 2 git clone --no-checkout "$repo" "$dest" \

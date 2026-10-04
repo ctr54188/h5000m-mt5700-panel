@@ -10,6 +10,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   TARGET: aarch64-unknown-linux-gnu
+  CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo-target
 
 jobs:
   # 主构建：原生 aarch64 runner（ubuntu-24.04-arm），无需交叉工具链
@@ -24,11 +25,12 @@ jobs:
       - name: 缓存 cargo
         uses: actions/cache@v4
         with:
+          # 注意：不要缓存 vendor/ 下的 target —— restore 会先造出目录，
+          # 让随后的 git clone 因「目标非空」失败
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src/mt5700-web/target
-            vendor/luci-app-mt5700/src/rust/target
+            .cargo-target
           key: ${{ runner.os }}-arm64-${{ hashFiles('src/mt5700-web/Cargo.toml', 'patches/*.patch') }}
 
       - name: 拉取上游（pin 提交）

@@ -38,11 +38,16 @@ echo "== [2/2] 编译上游后端 at-webserver（先打补丁）"
 "$ROOT/scripts/apply-patches.sh"
 cargo build --"$PROFILE" "${CARGO_TARGET_ARGS[@]}" --manifest-path "$ROOT/vendor/luci-app-mt5700/src/rust/Cargo.toml"
 
-DEST="$ROOT/src/mt5700-web/target/${TARGET:-}/$PROFILE"
-[ -n "$TARGET" ] || DEST="$ROOT/src/mt5700-web/target/$PROFILE"
+# 产物目录：支持外部 CARGO_TARGET_DIR（CI 用它做缓存，避免污染 vendor/）
+TDIR="${CARGO_TARGET_DIR:-}"
+crate_target() { # crate_target <crate 目录>
+	if [ -n "$TDIR" ]; then printf '%s' "$TDIR"; else printf '%s/target' "$1"; fi
+}
+DEST="$(crate_target "$ROOT/src/mt5700-web")/${TARGET:-}/$PROFILE"
+[ -n "$TARGET" ] || DEST="$(crate_target "$ROOT/src/mt5700-web")/$PROFILE"
 cp -v "$DEST/mt5700-web" "$OUT/mt5700-web"
-DEST2="$ROOT/vendor/luci-app-mt5700/src/rust/target/${TARGET:-}/$PROFILE"
-[ -n "$TARGET" ] || DEST2="$ROOT/vendor/luci-app-mt5700/src/rust/target/$PROFILE"
+DEST2="$(crate_target "$ROOT/vendor/luci-app-mt5700/src/rust")/${TARGET:-}/$PROFILE"
+[ -n "$TARGET" ] || DEST2="$(crate_target "$ROOT/vendor/luci-app-mt5700/src/rust")/$PROFILE"
 cp -v "$DEST2/at-webserver" "$OUT/at-webserver-rust"
 echo "== 产物：$OUT"
 ls -l "$OUT"
