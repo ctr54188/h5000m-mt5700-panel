@@ -76,19 +76,32 @@ jobs:
       - run: make build
       - run: make dist
       - run: file build/out/$TARGET/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: h5000m-mt5700-panel-aarch64-cross
+          path: |
+            build/*.tar.gz
+            build/*.tar.gz.sha256
+          if-no-files-found: warn
 
   release:
     name: release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [ build-aarch64 ]
+    # 两个构建 job 任一成功即可发版（native 为主，cross 兜底）
+    if: always() && startsWith(github.ref, 'refs/tags/v')
+    needs: [ build-aarch64, build-cross ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: h5000m-mt5700-panel-aarch64
+          pattern: h5000m-mt5700-panel-*
+          merge-multiple: true
           path: build
+      - name: 检查产物
+        run: |
+          ls -l build || true
+          test -n "$(ls build/*.tar.gz 2>/dev/null)" || { echo "没有可用产物，跳过发版"; exit 1; }
       - uses: softprops/action-gh-release@v2
         with:
           files: |

@@ -17,17 +17,33 @@ LUCI_APP_COMMIT="${LUCI_APP_COMMIT:-eba64994fec392b818afdcbca148b0e1dd8dc96f}"  
 LUCI_REPO="${LUCI_REPO:-https://github.com/openwrt/luci.git}"
 LUCI_COMMIT="${LUCI_COMMIT:-ad0b5676921df503d322454029839a856d17a07c}"           # openwrt-24.10
 
+# git 网络偶发失败（CI 上见过 "git clone ... Error 128"）：重试 + 回退到完整克隆
+retry() { # retry <次数> <命令...>
+	local n="$1"; shift
+	local i=1
+	while true; do
+		if "$@"; then return 0; fi
+		[ "$i" -ge "$n" ] && return 1
+		echo "   [第 $i 次失败，$((i*5))s 后重试] $*" >&2
+		sleep $((i*5)); i=$((i+1))
+	done
+}
+
 clone_pin() {
 	local repo="$1" commit="$2" dest="$3"
 	if [ -d "$dest/.git" ]; then
 		echo "== 复用已有 $dest"
 	else
 		echo "== 克隆 $repo -> $dest"
-		git clone --filter=blob:none --no-checkout "$repo" "$dest"
+		retry 3 git clone --filter=blob:none --no-checkout "$repo" "$dest" \
+			|| retry 2 git clone --no-checkout "$repo" "$dest" \
+			|| { echo "!! 克隆 $repo 失败" >&2; return 1; }
 	fi
 	echo "== 检出 $commit"
-	git -C "$dest" fetch --depth 1 origin "$commit" 2>/dev/null || git -C "$dest" fetch origin
-	git -C "$dest" checkout --force "$commit"
+	retry 3 git -C "$dest" fetch --depth 1 origin "$commit" \
+		|| retry 2 git -C "$dest" fetch origin \
+		|| { echo "!! fetch $commit 失败" >&2; return 1; }
+	git -C "$dest" checkout --force "$commit" || return 1
 	git -C "$dest" log -1 --format='   %h %ad %s' --date=short
 }
 
