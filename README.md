@@ -190,6 +190,19 @@ git tag v2.0.0 && git push origin v2.0.0
 
 ---
 
+## 6.1 与镜像仓库的关系（单向）
+
+本仓库**不触发**任何其它仓库的 workflow，也不依赖它们编译。
+
+镜像仓库 [`h5000m-debian`](../h5000m-debian) 有一个可选的「带面板」workflow
+（`image-with-panel.yml`），它在需要时会**单向**来本仓库：
+
+* 优先下载本仓库的 **Release 资产**（`h5000m-mt5700-panel-*.tar.gz`）；
+* 取不到时回退：`git clone` 本仓库 → `make build` → 本地打包。
+
+因此给本仓库打 tag 出 Release（`git tag v2.0.0 && git push origin v2.0.0`）会让镜像侧
+拿到「已编译好的面板包」，但**打 tag 不会触发镜像仓库的任何构建**。
+
 ## 7. 目录结构
 
 ```
